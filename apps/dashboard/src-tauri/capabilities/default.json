@@ -6,10 +6,17 @@
   "permissions": [
     "core:default",
     "opener:default",
+    "stronghold:default",
     {
       "identifier": "http:default",
       "allow": [
-        { "url": "http://localhost:11434/*" }
+        { "url": "http://localhost:11434/*" },
+        { "url": "https://oauth2.googleapis.com/*" },
+        { "url": "https://accounts.google.com/*" },
+        { "url": "https://www.googleapis.com/*" },
+        { "url": "https://searchconsole.googleapis.com/*" },
+        { "url": "https://analyticsadmin.googleapis.com/*" },
+        { "url": "http://127.0.0.1:*" }
       ]
     }
   ]
