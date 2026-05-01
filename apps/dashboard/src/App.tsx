@@ -1,13 +1,14 @@
-import { useState } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { Dashboard } from "./pages/Dashboard";
 import { Settings } from "./pages/Settings";
+import { useAppStore } from "./state/app-store";
 
 export default function App() {
   const navigate = useNavigate();
-  const [activeClientId, setActiveClientId] = useState<string | null>(null);
+  const activeClientId = useAppStore((s) => s.activeClientId);
+  const setActiveClientId = useAppStore((s) => s.setActiveClientId);
 
   const handleSelectClient = (id: string) => {
     setActiveClientId(id);
