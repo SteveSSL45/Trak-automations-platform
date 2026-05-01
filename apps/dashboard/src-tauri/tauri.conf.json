@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "dashboard",
+  "productName": "Trak Automations",
   "version": "0.1.0",
   "identifier": "com.trakautomations.dashboard",
   "build": {
@@ -12,9 +12,15 @@
   "app": {
     "windows": [
       {
-        "title": "dashboard",
-        "width": 800,
-        "height": 600
+        "title": "Trak Automations",
+        "width": 1400,
+        "height": 900,
+        "minWidth": 1100,
+        "minHeight": 720,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "transparent": false
       }
     ],
     "security": {
@@ -24,6 +30,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "category": "Productivity",
+    "shortDescription": "Multi-client SEO/marketing operator dashboard",
+    "longDescription": "Trak Automations is a single-operator AI-powered SEO/marketing agency dashboard. Manages multiple client websites with daily ingestion, automated swarm-based analysis, and operator-reviewed action plans.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
