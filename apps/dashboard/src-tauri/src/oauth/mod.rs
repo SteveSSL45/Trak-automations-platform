@@ -1,3 +1,4 @@
+pub mod commands;
 pub mod loopback;
 pub mod providers;
 pub mod storage;

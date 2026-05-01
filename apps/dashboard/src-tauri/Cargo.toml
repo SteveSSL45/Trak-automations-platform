@@ -29,4 +29,5 @@ oauth2 = { version = "5.0.0", default-features = false, features = ["reqwest"] }
 tiny_http = "0.12.0"
 url = "2.5.8"
 chrono = "0.4.44"
+open = "5.3.4"
 

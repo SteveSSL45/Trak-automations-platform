@@ -31,7 +31,10 @@ pub fn run() {
             tauri_plugin_stronghold::Builder::new(|password| derive_stronghold_key(password.as_bytes()))
                 .build(),
         )
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            oauth::commands::oauth_connect,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

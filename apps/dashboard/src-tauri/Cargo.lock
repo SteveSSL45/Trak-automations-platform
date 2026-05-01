@@ -943,6 +943,7 @@ dependencies = [
  "argon2",
  "chrono",
  "oauth2",
+ "open",
  "serde",
  "serde_json",
  "tauri",
