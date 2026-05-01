@@ -6,7 +6,40 @@ use oauth2::{
 };
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
+
+#[derive(Debug, Deserialize)]
+struct GoogleOAuthClientFile {
+    installed: GoogleInstalledClient,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct GoogleInstalledClient {
+    pub client_id: String,
+    pub client_secret: String,
+}
+
+/// Read the operator's GCP OAuth client credentials from
+/// `<app_data_dir>/google_oauth_client.json`. The file is the raw download
+/// from Google Cloud Console — operator places it there once.
+#[tauri::command]
+pub fn read_oauth_client(app: AppHandle) -> Result<GoogleInstalledClient, String> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("app_data_dir: {e}"))?;
+    let path = dir.join("google_oauth_client.json");
+    if !path.exists() {
+        return Err(format!(
+            "missing {}; place the GCP OAuth client JSON there",
+            path.display()
+        ));
+    }
+    let raw = std::fs::read_to_string(&path).map_err(|e| format!("read {path:?}: {e}"))?;
+    let parsed: GoogleOAuthClientFile =
+        serde_json::from_str(&raw).map_err(|e| format!("parse: {e}"))?;
+    Ok(parsed.installed)
+}
 
 #[derive(Debug, Serialize)]
 pub struct OAuthConnectResult {
