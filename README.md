@@ -39,13 +39,13 @@ Full architecture: [`TRAK_AUTOMATIONS.md`](./TRAK_AUTOMATIONS.md). Sister archit
 
 ## Repository status
 
-🚧 **Scaffolded — pre-Phase 1.** No code yet. The `apps/dashboard/`, `workers/`, and `prompts/` directories are placeholders for the upcoming build phases.
+🚧 **Phase 1 in progress.** Tauri shell + multi-client sidebar implemented; awaiting visual polish + production .app verification. Other directories (`workers/`, `prompts/`) remain placeholders for later phases.
 
 ### Build phases (per `TRAK_AUTOMATIONS.md` § "Build phases — 14-week MVP path")
 
 | Phase | What it ships | Plan file |
 |---|---|---|
-| **1** | Tauri shell + multi-client sidebar | [`docs/superpowers/plans/2026-04-28-phase-1-tauri-shell.md`](./docs/superpowers/plans/2026-04-28-phase-1-tauri-shell.md) ⏳ |
+| **1** | Tauri shell + multi-client sidebar | [`docs/superpowers/plans/2026-04-28-phase-1-tauri-shell.md`](./docs/superpowers/plans/2026-04-28-phase-1-tauri-shell.md) 🚧 |
 | 2 | Ollama integration + 70B inference proof | (later) |
 | 3 | Connections per client (GSC + GA4 OAuth) | (later) |
 | 4 | Daily ingestion workers | (later) |
@@ -57,14 +57,32 @@ Full architecture: [`TRAK_AUTOMATIONS.md`](./TRAK_AUTOMATIONS.md). Sister archit
 
 ## Local development (Mac)
 
-When Phase 1 lands, this section will get exact commands. For now, the structure expects:
+Prerequisites:
 
 - macOS 14+ (Apple Silicon)
 - Xcode Command Line Tools (`xcode-select --install`)
-- Node 22 LTS (via nvm or Homebrew)
+- Node 22 LTS or newer (via nvm or Homebrew)
 - Rust + Cargo (via [rustup](https://rustup.rs/))
-- Ollama (`brew install ollama`)
-- Python 3.11+ (`brew install python@3.11`)
+- Ollama (`brew install ollama`) — Phase 2+
+- Python 3.11+ (`brew install python@3.11`) — Phase 4+
+
+Run the dashboard (Phase 1):
+
+```bash
+cd apps/dashboard
+npm install
+npm run tauri dev      # native window, hot-reloads on save
+npm run tauri build    # produces apps/dashboard/src-tauri/target/release/bundle/macos/Trak Automations.app
+```
+
+See [`apps/dashboard/README.md`](./apps/dashboard/README.md) for stack details, source layout, and build artifact paths.
+
+## Built artifacts
+
+After `npm run tauri build` in `apps/dashboard/`:
+- `apps/dashboard/src-tauri/target/release/bundle/macos/Trak Automations.app` — drag to `/Applications/`
+
+First-launch Gatekeeper warning is expected (unsigned). Phase 9 of the master spec handles code-signing + notarization for real distribution.
 
 ## Repo layout
 
@@ -96,4 +114,4 @@ Proprietary. All rights reserved. Not for redistribution.
 
 ---
 
-*Last updated: 2026-04-28*
+*Last updated: 2026-05-01*
