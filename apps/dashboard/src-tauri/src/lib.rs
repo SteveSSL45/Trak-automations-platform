@@ -34,6 +34,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             oauth::commands::oauth_connect,
+            oauth::commands::oauth_probe,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

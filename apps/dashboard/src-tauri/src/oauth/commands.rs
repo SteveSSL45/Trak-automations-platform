@@ -1,8 +1,8 @@
 use crate::oauth::{record_id, LoopbackServer, Provider, StoredTokens};
 use oauth2::basic::BasicClient;
 use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, Scope, TokenUrl,
-    TokenResponse,
+    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, RedirectUrl, RefreshToken,
+    Scope, TokenUrl, TokenResponse,
 };
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -134,4 +134,123 @@ pub async fn oauth_connect(
         scopes_granted,
         record_key: key,
     })
+}
+
+#[derive(Debug, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum OAuthProbeResult {
+    Connected {
+        email: String,
+        expires_at_unix: i64,
+        refreshed: bool,
+    },
+    NeedsReauth {
+        reason: String,
+    },
+    Error {
+        reason: String,
+    },
+}
+
+/// Validate stored tokens by hitting the provider's probe URL.
+/// On 401 (or near-expiry) attempts a refresh-token grant and retries once.
+/// On refresh success, emits `oauth:store-token` with the updated blob so JS
+/// can persist the rotated tokens.
+#[tauri::command]
+pub async fn oauth_probe(
+    app: AppHandle,
+    target_client_id: String,
+    provider: Provider,
+    stored_blob: String,
+    oauth_client_id: String,
+    oauth_client_secret: String,
+) -> Result<OAuthProbeResult, String> {
+    let cfg = provider.config();
+    let mut tokens: StoredTokens =
+        serde_json::from_str(&stored_blob).map_err(|e| format!("blob parse: {e}"))?;
+
+    let http_client = oauth2::reqwest::ClientBuilder::new()
+        .redirect(oauth2::reqwest::redirect::Policy::none())
+        .build()
+        .map_err(|e| format!("http client: {e}"))?;
+
+    // First probe with current access token
+    let mut status = probe_status(&http_client, cfg.probe_url, &tokens.access_token).await;
+    let mut refreshed = false;
+
+    if status == Some(401) {
+        // Try refresh
+        let oauth_client = BasicClient::new(ClientId::new(oauth_client_id.clone()))
+            .set_client_secret(ClientSecret::new(oauth_client_secret.clone()))
+            .set_auth_uri(AuthUrl::new(cfg.auth_url.into()).map_err(|e| format!("auth url: {e}"))?)
+            .set_token_uri(
+                TokenUrl::new(cfg.token_url.into()).map_err(|e| format!("token url: {e}"))?,
+            );
+
+        let refresh_result = oauth_client
+            .exchange_refresh_token(&RefreshToken::new(tokens.refresh_token.clone()))
+            .request_async(&http_client)
+            .await;
+
+        match refresh_result {
+            Ok(new_tokens) => {
+                tokens.access_token = new_tokens.access_token().secret().clone();
+                if let Some(rt) = new_tokens.refresh_token() {
+                    tokens.refresh_token = rt.secret().clone();
+                }
+                let expires_in = new_tokens
+                    .expires_in()
+                    .map(|d| d.as_secs() as i64)
+                    .unwrap_or(3600);
+                tokens.expires_at_unix = chrono::Utc::now().timestamp() + expires_in;
+
+                let key = record_id(&target_client_id, provider);
+                let blob = serde_json::to_string(&tokens).map_err(|e| format!("serialize: {e}"))?;
+                app.emit(
+                    "oauth:store-token",
+                    serde_json::json!({ "key": key, "blob": blob }),
+                )
+                .map_err(|e| format!("emit: {e}"))?;
+                refreshed = true;
+                // Re-probe with the new token
+                status = probe_status(&http_client, cfg.probe_url, &tokens.access_token).await;
+            }
+            Err(e) => {
+                return Ok(OAuthProbeResult::NeedsReauth {
+                    reason: format!("refresh rejected: {e}"),
+                });
+            }
+        }
+    }
+
+    match status {
+        Some(s) if (200..300).contains(&s) => Ok(OAuthProbeResult::Connected {
+            email: tokens.email,
+            expires_at_unix: tokens.expires_at_unix,
+            refreshed,
+        }),
+        Some(401) => Ok(OAuthProbeResult::NeedsReauth {
+            reason: "401 after refresh attempt".into(),
+        }),
+        Some(s) => Ok(OAuthProbeResult::Error {
+            reason: format!("probe HTTP {s}"),
+        }),
+        None => Ok(OAuthProbeResult::Error {
+            reason: "probe network error".into(),
+        }),
+    }
+}
+
+async fn probe_status(
+    client: &oauth2::reqwest::Client,
+    url: &str,
+    access_token: &str,
+) -> Option<u16> {
+    client
+        .get(url)
+        .bearer_auth(access_token)
+        .send()
+        .await
+        .ok()
+        .map(|r| r.status().as_u16())
 }
