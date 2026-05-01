@@ -1,5 +1,49 @@
+import { useEffect, useState } from "react";
 import { Search, BarChart3, Brain, Cpu } from "lucide-react";
-import { ConnectionCard } from "../components/ConnectionCard";
+import { ConnectionCard, type ConnectionStatus } from "../components/ConnectionCard";
+import { getOllamaStatus, type OllamaStatus } from "../lib/ollama";
+
+function OllamaCard() {
+  const [status, setStatus] = useState<OllamaStatus | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getOllamaStatus().then((s) => {
+      if (!cancelled) setStatus(s);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const cardStatus: ConnectionStatus =
+    status === null
+      ? "not_connected"
+      : status.kind === "connected"
+        ? "connected"
+        : status.kind === "model_missing"
+          ? "needs_reauth"
+          : "not_connected";
+
+  const description =
+    status === null
+      ? "Probing http://localhost:11434…"
+      : status.kind === "connected"
+        ? `Connected · ${status.model} (Ollama ${status.version})`
+        : status.kind === "model_missing"
+          ? `Ollama ${status.version} reachable, but llama3.3:70b is not pulled`
+          : `Not reachable: ${status.reason}`;
+
+  return (
+    <ConnectionCard
+      name="Ollama (local)"
+      description={description}
+      Icon={Cpu}
+      status={cardStatus}
+      scopeNote="Auto-detected on http://localhost:11434"
+    />
+  );
+}
 
 export function Settings() {
   return (
@@ -30,13 +74,7 @@ export function Settings() {
             status="not_connected"
             scopeNote="Master key, shared across clients."
           />
-          <ConnectionCard
-            name="Ollama (local)"
-            description="Llama 3.3 70B + future LoRA adapters"
-            Icon={Cpu}
-            status="not_connected"
-            scopeNote="Auto-detected on http://localhost:11434"
-          />
+          <OllamaCard />
         </div>
       </section>
 
