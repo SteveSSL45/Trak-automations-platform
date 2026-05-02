@@ -61,7 +61,43 @@ To install to `/Applications/`:
 cp -r "src-tauri/target/release/bundle/macos/Trak Automations.app" /Applications/
 ```
 
-Code-signing + notarization for real distribution land in Phase 9.
+## Distribution / code signing
+
+When you want to hand the app to a non-dev Mac (a client's machine, or a
+fresh laptop) without the Gatekeeper warning + `xattr` workaround, sign +
+notarize it.
+
+**One-time operator setup:**
+
+1. Apple Developer Program membership ($99/yr): https://developer.apple.com/programs/enroll/
+2. **Developer ID Application** cert via Xcode → Settings → Accounts → Manage Certificates → "+". Lands in Login Keychain.
+3. App-specific password at https://appleid.apple.com → Sign-In and Security → App-Specific Passwords. Save it.
+4. Find your Team ID at https://developer.apple.com/account → Membership.
+
+**Enable signing in `tauri.conf.json`:** change `bundle.macOS.signingIdentity` from `null` to your cert name. Find the exact name with:
+
+```bash
+security find-identity -v -p codesigning
+```
+
+It looks like `Developer ID Application: Your Name (ABCDE12345)`.
+
+**Build + notarize:**
+
+```bash
+# Sign + bundle
+cd apps/dashboard && npm run tauri build
+
+# Notarize (one-time per build)
+export APPLE_ID="you@example.com"
+export APPLE_TEAM_ID="ABCDE12345"
+export APPLE_APP_PASSWORD="xxxx-xxxx-xxxx-xxxx"   # the app-specific one
+bash ../../scripts/notarize.sh
+```
+
+The script submits the `.dmg`, polls Apple (~1-5 min), and staples the ticket. After that the `.dmg` opens cleanly on any Mac, offline.
+
+`bundle.macOS.signingIdentity` stays `null` in the committed config so other devs (or CI) can build unsigned. Each operator sets it locally.
 
 ## Source layout
 

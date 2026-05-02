@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Vite dev mode + WKWebView's JIT compiler need JIT-allocated executable pages. -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+
+    <!-- Stronghold's IOTA crypto + reqwest's TLS layer can require unsigned executable memory. -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+
+    <!-- HTTP client for Ollama (localhost) + Google APIs + OAuth. -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+
+    <!-- Loopback OAuth callback server binds 127.0.0.1:<random_port>. -->
+    <key>com.apple.security.network.server</key>
+    <true/>
+</dict>
+</plist>
