@@ -11,7 +11,7 @@ import {
   Save,
   Sparkles,
 } from "lucide-react";
-import { getClientById } from "../lib/clients";
+import { useClientsStore, getClientById } from "../state/clients-store";
 import {
   type ActionPlan,
   type ActionPlanDeliverable,
@@ -38,6 +38,7 @@ interface RowState {
 }
 
 export function Dashboard({ activeClientId }: Props) {
+  const clients = useClientsStore((s) => s.clients);
   const [date, setDate] = useState(todayIsoYesterday);
   const [dossier, setDossier] = useState<Dossier | null>(null);
   const [actionPlan, setActionPlan] = useState<ActionPlan | null>(null);
@@ -103,7 +104,7 @@ export function Dashboard({ activeClientId }: Props) {
     );
   }
 
-  const client = getClientById(activeClientId);
+  const client = getClientById(clients, activeClientId);
   if (!client) {
     return (
       <div className="flex h-full items-center justify-center px-6">

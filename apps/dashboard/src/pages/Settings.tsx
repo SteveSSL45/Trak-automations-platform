@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Brain, Cpu } from "lucide-react";
 import { ConnectionCard, type ConnectionStatus } from "../components/ConnectionCard";
 import { ClientConnectionRow } from "../components/ClientConnectionRow";
-import { CLIENTS } from "../lib/clients";
+import { useClientsStore } from "../state/clients-store";
 import { getOllamaStatus, type OllamaStatus } from "../lib/ollama";
 import { readOAuthClient, type GoogleInstalledClient } from "../lib/oauth";
 
@@ -49,6 +49,7 @@ function OllamaCard() {
 }
 
 export function Settings() {
+  const clients = useClientsStore((s) => s.clients);
   const [oauthClient, setOauthClient] = useState<GoogleInstalledClient | null>(null);
   const [oauthClientError, setOauthClientError] = useState<string | null>(null);
 
@@ -121,7 +122,7 @@ export function Settings() {
         )}
 
         <div className="space-y-4">
-          {CLIENTS.map((c) => (
+          {clients.map((c) => (
             <ClientConnectionRow
               key={c.id}
               client={c}

@@ -23,6 +23,27 @@ from google.oauth2.credentials import Credentials
 DEFAULT_DATA_DIR = Path.home() / "Library" / "Application Support" / "com.trakautomations.dashboard"
 DATA_DIR = Path(os.environ.get("TRAK_DATA_DIR", DEFAULT_DATA_DIR))
 CLIENTS_DIR = DATA_DIR / "clients"
+CLIENTS_CONFIG = DATA_DIR / "clients.json"
+
+
+def read_clients_config() -> list[dict]:
+    """Read the dashboard-managed list of clients (added via the Tauri UI).
+
+    Returns empty list if the file doesn't exist (operator hasn't launched
+    the dashboard yet — Tauri seeds the file on first read).
+    """
+    import json
+
+    if not CLIENTS_CONFIG.exists():
+        return []
+    return json.loads(CLIENTS_CONFIG.read_text())
+
+
+def find_client(client_id: str) -> dict | None:
+    for c in read_clients_config():
+        if c.get("id") == client_id:
+            return c
+    return None
 
 
 def credentials_path(client_id: str, provider: str) -> Path:

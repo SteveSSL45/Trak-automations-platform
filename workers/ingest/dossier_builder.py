@@ -23,32 +23,11 @@ import time
 from pathlib import Path
 from typing import Any
 
-from ._common import CLIENTS_DIR, db_path
+from ._common import CLIENTS_DIR, db_path, find_client
 
 SCHEMA_VERSION = "0.1"
 TOP_N = 25
 WEEKLY_TOP_N = 15
-
-# Per-client metadata. Phase 1 hardcoded these in apps/dashboard/src/lib/clients.ts;
-# Phase 5 mirrors here. Phase 3 (per-client OAuth) implies the operator manages a list,
-# so eventually this lives in clients/<id>/client_config.json (Phase 3 v1.5+).
-CLIENT_META: dict[str, dict[str, str]] = {
-    "trak-automations": {
-        "name": "Trak Automations",
-        "domain": "trakautomations.com",
-        "industry": "AI/automation agency (eat-your-own-dog-food)",
-    },
-    "lawn-care-co": {
-        "name": "Lawn Care Co.",
-        "domain": "lawncare-pilot.com",
-        "industry": "Lawn care + landscaping (Genesee County)",
-    },
-    "home-improvement-co": {
-        "name": "Home Improvement Co.",
-        "domain": "homeimprovement-pilot.com",
-        "industry": "Home remodeling + handyman (Genesee County)",
-    },
-}
 
 
 def _has_table(conn: sqlite3.Connection, table: str) -> bool:
@@ -240,7 +219,7 @@ def build_ga4_daily(conn: sqlite3.Connection, target_day: dt.date) -> dict[str, 
 
 
 def build_dossier(client_id: str, target_day: dt.date) -> dict[str, Any]:
-    meta = CLIENT_META.get(client_id, {})
+    meta = find_client(client_id) or {}
 
     # Open both DBs (read-only). Missing files are fine — sections become null.
     gsc_path = db_path(client_id, "gsc")

@@ -21,23 +21,11 @@ import sys
 import time
 from pathlib import Path
 
-from ._common import CLIENTS_DIR, credentials_path
+from ._common import CLIENTS_DIR, credentials_path, find_client, read_clients_config
 from . import dossier_builder, ga4, gsc, report_generator
 
 LOG_DIR = Path.home() / "Library" / "Logs" / "trak-automations"
 LOG_FILE = LOG_DIR / "daily.log"
-
-# Per-client property metadata. Phase 3 v1.5 will move this to
-# clients/<id>/client_config.json — for Phase 7 thin slice we hardcode.
-CLIENT_PROPERTIES: dict[str, dict[str, str]] = {
-    "trak-automations": {
-        "gsc_site": "sc-domain:trakautomations.com",
-        "ga4_property_id": "535548482",
-    },
-    # Add more as clients onboard:
-    # "lawn-care-co":     {"gsc_site": "...", "ga4_property_id": "..."},
-    # "home-improvement-co": {"gsc_site": "...", "ga4_property_id": "..."},
-}
 
 
 def _setup_logging() -> logging.Logger:
@@ -58,13 +46,10 @@ def _setup_logging() -> logging.Logger:
 
 
 def discover_clients() -> list[str]:
-    if not CLIENTS_DIR.exists():
-        return []
-    return sorted(
-        d.name
-        for d in CLIENTS_DIR.iterdir()
-        if d.is_dir() and (d / "credentials_gsc.json").exists()
-    )
+    """Discover clients to process. Source of truth: clients.json (managed
+    via the Tauri dashboard). run_for_client() handles per-client skips when
+    OAuth credentials or property identifiers are missing."""
+    return [c["id"] for c in read_clients_config()]
 
 
 def notify(title: str, body: str) -> None:
@@ -80,25 +65,28 @@ def notify(title: str, body: str) -> None:
 
 def run_for_client(client_id: str, target_day: dt.date, logger: logging.Logger) -> bool:
     """Run the full pipeline for one client. Returns True on success."""
-    props = CLIENT_PROPERTIES.get(client_id)
-    if not props:
-        logger.warning(
-            f"  {client_id}: no entry in CLIENT_PROPERTIES — skipping. "
-            f"Add gsc_site + ga4_property_id to daily_run.py."
-        )
+    client = find_client(client_id)
+    if not client:
+        logger.warning(f"  {client_id}: not in clients.json — skipping.")
         return False
 
     success = True
+    gsc_site = client.get("gsc_site")
+    ga4_property_id = client.get("ga4_property_id")
 
     # GSC
     gsc_creds = credentials_path(client_id, "gsc")
-    if gsc_creds.exists():
+    if not gsc_site:
+        logger.info(f"  {client_id} · GSC: no gsc_site set in clients.json — skip")
+    elif not gsc_creds.exists():
+        logger.info(f"  {client_id} · GSC creds missing — skip")
+    else:
         try:
             sys.argv = [
                 "ingest.gsc",
                 client_id,
                 "--site",
-                props["gsc_site"],
+                gsc_site,
                 "--date",
                 target_day.isoformat(),
             ]
@@ -107,18 +95,20 @@ def run_for_client(client_id: str, target_day: dt.date, logger: logging.Logger) 
         except Exception as e:
             logger.error(f"  {client_id} · GSC ingest FAILED: {e}")
             success = False
-    else:
-        logger.info(f"  {client_id} · GSC creds missing — skip")
 
     # GA4
     ga4_creds = credentials_path(client_id, "ga4")
-    if ga4_creds.exists():
+    if not ga4_property_id:
+        logger.info(f"  {client_id} · GA4: no ga4_property_id set in clients.json — skip")
+    elif not ga4_creds.exists():
+        logger.info(f"  {client_id} · GA4 creds missing — skip")
+    else:
         try:
             sys.argv = [
                 "ingest.ga4",
                 client_id,
                 "--property-id",
-                props["ga4_property_id"],
+                ga4_property_id,
                 "--date",
                 target_day.isoformat(),
             ]
@@ -127,8 +117,6 @@ def run_for_client(client_id: str, target_day: dt.date, logger: logging.Logger) 
         except Exception as e:
             logger.error(f"  {client_id} · GA4 ingest FAILED: {e}")
             success = False
-    else:
-        logger.info(f"  {client_id} · GA4 creds missing — skip")
 
     # Dossier
     try:
