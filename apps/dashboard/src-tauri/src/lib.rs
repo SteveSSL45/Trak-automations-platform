@@ -1,3 +1,4 @@
+mod clients;
 mod dossier;
 mod oauth;
 
@@ -42,6 +43,9 @@ pub fn run() {
             dossier::commands::read_action_plan,
             dossier::commands::read_decisions,
             dossier::commands::write_decisions,
+            clients::commands::read_clients,
+            clients::commands::add_client,
+            clients::commands::update_client,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
