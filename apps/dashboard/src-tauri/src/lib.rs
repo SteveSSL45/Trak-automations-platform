@@ -36,6 +36,7 @@ pub fn run() {
             oauth::commands::oauth_connect,
             oauth::commands::oauth_probe,
             oauth::commands::read_oauth_client,
+            oauth::commands::write_credentials_for_python,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

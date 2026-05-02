@@ -1,6 +1,7 @@
 import { Client, Store, Stronghold } from "@tauri-apps/plugin-stronghold";
 import { appDataDir, join } from "@tauri-apps/api/path";
 import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 
 const CLIENT_NAME = "trak-oauth-tokens";
 const SNAPSHOT_FILE = "stronghold.snapshot";
@@ -32,6 +33,24 @@ export async function unlockStronghold(password: string): Promise<void> {
     async (event) => {
       const { key, blob } = event.payload;
       await setToken(key, blob);
+
+      // Phase 4 token bridge: also write a Python-readable JSON for the
+      // ingestion workers. Key format is "<client-id>::<provider>".
+      const sep = key.indexOf("::");
+      if (sep > 0) {
+        const targetClientId = key.slice(0, sep);
+        const provider = key.slice(sep + 2);
+        try {
+          await invoke("write_credentials_for_python", {
+            targetClientId,
+            provider,
+            storedBlob: blob,
+          });
+        } catch (err) {
+          console.warn("write_credentials_for_python failed:", err);
+          // Non-fatal — Stronghold persist already succeeded.
+        }
+      }
     }
   );
 }

@@ -41,6 +41,42 @@ pub fn read_oauth_client(app: AppHandle) -> Result<GoogleInstalledClient, String
     Ok(parsed.installed)
 }
 
+/// Write a Python-readable credentials JSON to
+/// `<app_data_dir>/clients/<client-id>/credentials_<provider>.json`.
+/// Used by Phase 4 ingest workers to bootstrap OAuth without touching
+/// Stronghold. Combines the operator's GCP client_id/client_secret with
+/// the per-client refresh_token.
+#[tauri::command]
+pub fn write_credentials_for_python(
+    app: AppHandle,
+    target_client_id: String,
+    provider: Provider,
+    stored_blob: String,
+) -> Result<String, String> {
+    let installed = read_oauth_client(app.clone())?;
+    let tokens: StoredTokens =
+        serde_json::from_str(&stored_blob).map_err(|e| format!("parse blob: {e}"))?;
+
+    let payload = serde_json::json!({
+        "client_id": installed.client_id,
+        "client_secret": installed.client_secret,
+        "refresh_token": tokens.refresh_token,
+        "scopes": tokens.scopes,
+    });
+
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("app_data_dir: {e}"))?
+        .join("clients")
+        .join(&target_client_id);
+    std::fs::create_dir_all(&dir).map_err(|e| format!("mkdir: {e}"))?;
+    let path = dir.join(format!("credentials_{}.json", provider.key()));
+    std::fs::write(&path, serde_json::to_string_pretty(&payload).unwrap())
+        .map_err(|e| format!("write: {e}"))?;
+    Ok(path.display().to_string())
+}
+
 #[derive(Debug, Serialize)]
 pub struct OAuthConnectResult {
     pub email: String,
