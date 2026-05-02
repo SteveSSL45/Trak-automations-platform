@@ -9,6 +9,10 @@ interface Props {
   status: ConnectionStatus;
   scopeNote?: string;
   onAction?: () => void;
+  /** Override the action button label. If omitted, defaults based on status. */
+  actionLabel?: string;
+  /** Trailing hint after the button. Defaults to a "wire up later" placeholder. */
+  actionHint?: string;
 }
 
 const STATUS_META: Record<ConnectionStatus, { label: string; color: string; ring: string }> = {
@@ -18,8 +22,25 @@ const STATUS_META: Record<ConnectionStatus, { label: string; color: string; ring
   not_connected: { label: "Not connected", color: "text-slate-500",    ring: "ring-slate-700"      },
 };
 
-export function ConnectionCard({ name, description, Icon, status, scopeNote, onAction }: Props) {
+export function ConnectionCard({
+  name,
+  description,
+  Icon,
+  status,
+  scopeNote,
+  onAction,
+  actionLabel,
+  actionHint,
+}: Props) {
   const meta = STATUS_META[status];
+  const defaultLabel =
+    status === "connected"
+      ? "Reconnect"
+      : status === "needs_reauth"
+        ? "Reauthorize"
+        : status === "broken"
+          ? "Reconnect"
+          : "Connect";
   return (
     <div className={`rounded-lg border border-slate-800 bg-slate-900/40 p-5 ring-1 ${meta.ring}`}>
       <div className="flex items-start justify-between">
@@ -47,9 +68,9 @@ export function ConnectionCard({ name, description, Icon, status, scopeNote, onA
           disabled={!onAction}
           className="rounded-md border border-slate-700 bg-slate-800/60 px-3 py-1.5 text-xs font-medium text-slate-200 hover:border-cyan-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {status === "connected" ? "Test connection" : status === "needs_reauth" ? "Reauthorize" : "Configure"}
+          {actionLabel ?? defaultLabel}
         </button>
-        <span className="text-xs text-slate-600">— Phase 3 will wire this up</span>
+        {actionHint && <span className="text-xs text-slate-600">{actionHint}</span>}
       </div>
     </div>
   );

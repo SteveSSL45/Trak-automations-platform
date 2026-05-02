@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
-import { Search, BarChart3, Brain, Cpu } from "lucide-react";
+import { Brain, Cpu } from "lucide-react";
 import { ConnectionCard, type ConnectionStatus } from "../components/ConnectionCard";
+import { ClientConnectionRow } from "../components/ClientConnectionRow";
+import { CLIENTS } from "../lib/clients";
 import { getOllamaStatus, type OllamaStatus } from "../lib/ollama";
+import { readOAuthClient, type GoogleInstalledClient } from "../lib/oauth";
 
 function OllamaCard() {
   const [status, setStatus] = useState<OllamaStatus | null>(null);
@@ -46,12 +49,30 @@ function OllamaCard() {
 }
 
 export function Settings() {
+  const [oauthClient, setOauthClient] = useState<GoogleInstalledClient | null>(null);
+  const [oauthClientError, setOauthClientError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    readOAuthClient()
+      .then((c) => {
+        if (!cancelled) setOauthClient(c);
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setOauthClientError(err instanceof Error ? err.message : String(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
       <header className="mb-8">
         <h1 className="text-2xl font-semibold tracking-tight text-white">Settings</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Operator-level configuration. Per-client settings live on each client&rsquo;s detail page.
+          Operator-level configuration. Per-client OAuth grants below.
         </p>
       </header>
 
@@ -62,10 +83,6 @@ export function Settings() {
           </h2>
           <p className="text-xs text-slate-600">Shared across all clients</p>
         </div>
-        <p className="mb-4 text-sm text-slate-500">
-          API keys you own (not the client&rsquo;s). One key serves every client unless overridden per-client.
-        </p>
-
         <div className="grid gap-4 sm:grid-cols-2">
           <ConnectionCard
             name="Anthropic API"
@@ -73,6 +90,7 @@ export function Settings() {
             Icon={Brain}
             status="not_connected"
             scopeNote="Master key, shared across clients."
+            actionHint="— wired in a follow-up"
           />
           <OllamaCard />
         </div>
@@ -81,34 +99,37 @@ export function Settings() {
       <section>
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-            Per-client connections
+            Per-client OAuth grants
           </h2>
-          <p className="text-xs text-slate-600">Authorized per client</p>
+          <p className="text-xs text-slate-600">One Google account per client per provider</p>
         </div>
         <p className="mb-4 text-sm text-slate-500">
-          OAuth flows that authorize TRAK to read each client&rsquo;s Google services. Each client connects their own.
+          Each client connects their own Google account so TRAK can read their Search Console
+          + Analytics data on their behalf.
         </p>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <ConnectionCard
-            name="Google Search Console"
-            description="Daily query/page/position pulls"
-            Icon={Search}
-            status="not_connected"
-            scopeNote="Read-only · per-client OAuth"
-          />
-          <ConnectionCard
-            name="Google Analytics 4"
-            description="Conversions + landing-page engagement"
-            Icon={BarChart3}
-            status="not_connected"
-            scopeNote="Read-only · per-client OAuth"
-          />
+        {oauthClientError && !oauthClient && (
+          <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-300">
+            <p className="font-medium">Operator OAuth credentials not found.</p>
+            <p className="mt-1 text-amber-300/80">
+              Place the GCP-downloaded <code className="text-amber-200">client_secret_*.json</code> as{" "}
+              <code className="text-amber-200">google_oauth_client.json</code> in the app data dir,
+              then restart the dashboard.
+            </p>
+            <p className="mt-1 font-mono text-[10px] text-amber-300/60">{oauthClientError}</p>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {CLIENTS.map((c) => (
+            <ClientConnectionRow
+              key={c.id}
+              client={c}
+              oauthClient={oauthClient}
+              oauthClientError={oauthClientError}
+            />
+          ))}
         </div>
-
-        <p className="mt-4 text-xs text-slate-600">
-          Add Ahrefs, DataForSEO, PageSpeed Insights in Phase 3 v1.5.
-        </p>
       </section>
     </div>
   );
