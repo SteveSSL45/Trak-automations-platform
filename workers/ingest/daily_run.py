@@ -22,7 +22,7 @@ import time
 from pathlib import Path
 
 from ._common import CLIENTS_DIR, credentials_path
-from . import dossier_builder, ga4, gsc
+from . import dossier_builder, ga4, gsc, report_generator
 
 LOG_DIR = Path.home() / "Library" / "Logs" / "trak-automations"
 LOG_FILE = LOG_DIR / "daily.log"
@@ -186,10 +186,22 @@ def main() -> int:
             logger.error(f"  {cid} · UNCAUGHT: {e}")
             failed.append(cid)
 
+    # Friday: also generate weekly PDFs for clients that succeeded today
+    is_friday = dt.date.today().weekday() == 4
+    if is_friday and succeeded:
+        logger.info(f"--- Friday: generating weekly reports for {len(succeeded)} client(s)")
+        for cid in succeeded:
+            try:
+                out_path = report_generator.generate(cid, target_day)
+                logger.info(f"  {cid} · weekly PDF: {out_path}")
+            except Exception as e:
+                logger.error(f"  {cid} · weekly PDF FAILED: {e}")
+
     elapsed = time.time() - started
     summary = (
         f"daily_run done in {elapsed:.1f}s · {len(succeeded)} ok"
         + (f", {len(failed)} failed" if failed else "")
+        + (" · weekly reports generated" if is_friday and succeeded else "")
     )
     logger.info(f"=== {summary}")
 
