@@ -1,3 +1,4 @@
+mod dossier;
 mod oauth;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -37,6 +38,10 @@ pub fn run() {
             oauth::commands::oauth_probe,
             oauth::commands::read_oauth_client,
             oauth::commands::write_credentials_for_python,
+            dossier::commands::read_dossier,
+            dossier::commands::read_action_plan,
+            dossier::commands::read_decisions,
+            dossier::commands::write_decisions,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
