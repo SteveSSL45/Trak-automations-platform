@@ -1,6 +1,7 @@
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
+import { StrongholdGate } from "./components/StrongholdGate";
 import { Dashboard } from "./pages/Dashboard";
 import { Settings } from "./pages/Settings";
 import { useAppStore } from "./state/app-store";
@@ -16,6 +17,7 @@ export default function App() {
   };
 
   return (
+    <StrongholdGate>
     <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-100">
       <Sidebar
         activeClientId={activeClientId}
@@ -37,5 +39,6 @@ export default function App() {
         </main>
       </div>
     </div>
+    </StrongholdGate>
   );
 }
